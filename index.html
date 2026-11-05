@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Patient Data Analysis System - Operational Analytics</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200">
+
+    <!-- Administrator Login Screen Overlay -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+            <!-- Header Section -->
+            <div class="p-6 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-center relative">
+                <div class="w-14 h-14 bg-brand-600 text-white rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-brand-500/20 mb-3">
+                    <i class="fa-solid fa-hospital-user text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-white">CareMetrics Analytics</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Hospital Workload & Operational Analytics Portal</p>
+                <div class="mt-3 inline-flex items-center space-x-1 px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Restricted Administrator Access</span>
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="p-6 space-y-4">
+                <!-- Error Alert Box -->
+                <div id="login-error" class="hidden p-3 rounded-lg bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-sm flex-shrink-0"></i>
+                    <span id="login-error-text">Unauthorized access attempt. Valid administrator credentials required.</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Administrator Email</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="email" id="login-email" required placeholder="name@hospital.org" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Password</label>
+                        <span class="text-[11px] text-slate-400">Any valid password</span>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <i id="eye-icon" class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <label class="flex items-center space-x-2 cursor-pointer text-slate-600 dark:text-slate-400">
+                        <input type="checkbox" id="remember-me" checked class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span>Remember session</span>
+                    </label>
+                    <span class="text-slate-400 text-[11px]">Enforced 2FA & Audit Log</span>
+                </div>
+
+                <button type="submit" id="login-submit-btn" class="w-full mt-2 py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg shadow-md shadow-brand-500/20 transition flex items-center justify-center space-x-2 text-sm">
+                    <span>Authenticate & Access Dashboard</span>
+                    <i class="fa-solid fa-shield-halved text-xs"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Protected Content Wrapper -->
+    <div id="protected-dashboard" class="hidden min-h-full flex flex-col">
+        <!-- Top Operational Disclaimer Banner -->
+        <div id="disclaimer-banner" class="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs md:text-sm text-amber-800 dark:text-amber-300 flex items-center justify-between">
+            <div class="flex items-center space-x-2 max-w-7xl mx-auto w-full">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 text-base flex-shrink-0"></i>
+                <div>
+                    <strong class="font-semibold">OPERATIONAL ANALYTICS ONLY &bull; NON-CLINICAL USE:</strong> 
+                    This system processes purely synthetic, de-identified patient visit records for hospital capacity and workflow evaluation. It provides no clinical diagnoses or treatment recommendations.
+                </div>
+            </div>
+            <button onclick="dismissBanner()" class="text-amber-700 dark:text-amber-400 hover:opacity-75 focus:outline-none ml-4">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+
+        <!-- Navigation Header -->
+        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Brand Title -->
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md">
+                            <i class="fa-solid fa-hospital-user text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">CareMetrics Analytics</h1>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Hospital Workload & Operational Insights</p>
+                        </div>
+                    </div>
+
+                    <!-- Header Right Actions & Admin Profile -->
+                    <div class="flex items-center space-x-3 sm:space-x-4">
+                        <!-- Security Audit Button -->
+                        <button onclick="openSecurityAuditModal()" title="Security Audit Logs" class="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                            <i class="fa-solid fa-user-shield text-brand-600 dark:text-brand-400"></i>
+                            <span class="hidden sm:inline">Audit Logs</span>
+                        </button>
+
+                        <!-- Export Button -->
+                        <button onclick="exportCSV()" class="inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                            <i class="fa-solid fa-file-csv text-emerald-600 dark:text-emerald-400"></i>
+                            <span class="hidden sm:inline">Export CSV</span>
+                        </button>
+
+                        <!-- Add Visit Record Button -->
+                        <button onclick="openModal()" class="inline-flex items-center space-x-2 px-3.5 py-2 text-sm font-medium rounded-lg text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Log Visit</span>
+                        </button>
+
+                        <!-- Settings Panel Trigger -->
+                        <button onclick="openSettingsModal()" title="System Settings & Preferences" class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none transition">
+                            <i class="fa-solid fa-gear text-lg"></i>
+                        </button>
+
+                        <!-- Theme Toggle -->
+                        <button onclick="toggleDarkMode()" class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none">
+                            <i id="theme-toggle-icon" class="fa-solid fa-moon text-lg"></i>
+                        </button>
+
+                        <!-- Admin Profile & Actions -->
+                        <div class="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openChangePasswordModal()" title="Change Administrator Password" class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/60 border border-brand-500/30 text-brand-700 dark:text-brand-300 font-bold flex items-center justify-center text-xs">
+                                    AD
+                                </div>
+                                <div class="hidden md:block text-left pr-1">
+                                    <div id="user-display-email" class="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">admin@hospital.org</div>
+                                    <div class="text-[10px] text-slate-400 font-medium flex items-center space-x-1">
+                                        <span>Administrator</span>
+                                        <i class="fa-solid fa-key text-[9px] text-brand-500"></i>
+                                    </div>
+                                </div>
+                            </button>
+
+                            <button onclick="handleLogout()" title="Log out administrator session" class="p-2 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition">
+                                <i class="fa-solid fa-right-from-bracket text-base"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            <!-- Filter Bar -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <!-- Department Filter -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Department</label>
+                        <select id="filter-dept" onchange="applyFilters()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Departments</option>
+                            <option value="Cardiology">Cardiology</option>
+                            <option value="Orthopedics">Orthopedics</option>
+                            <option value="Pediatrics">Pediatrics</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="Neurology">Neurology</option>
+                            <option value="General Medicine">General Medicine</option>
+                        </select>
+                    </div>
+
+                    <!-- Visit Type Filter -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Visit Type</label>
+                        <select id="filter-visit-type" onchange="applyFilters()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Visit Types</option>
+                            <option value="Routine Checkup">Routine Checkup</option>
+                            <option value="Follow-up">Follow-up</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="Consultation">Consultation</option>
+                        </select>
+                    </div>
+
+                    <!-- Age Band Filter -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Age Band</label>
+                        <select id="filter-age-band" onchange="applyFilters()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Age Groups</option>
+                            <option value="0-17">0-17 Years</option>
+                            <option value="18-35">18-35 Years</option>
+                            <option value="36-50">36-50 Years</option>
+                            <option value="51-65">51-65 Years</option>
+                            <option value="65+">65+ Years</option>
+                        </select>
+                    </div>
+
+                    <!-- Timeframe Filter -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Time Period</label>
+                        <select id="filter-timeframe" onchange="applyFilters()" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All History (90 Days)</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="60">Last 60 Days</option>
+                        </select>
+                    </div>
+
+                    <!-- Reset Action -->
+                    <div class="flex items-end">
+                        <button onclick="resetFilters()" class="w-full py-1.5 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Reset Filters</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- KPI Metric Summary Cards Grid -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Metric 1 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Visits Logged</p>
+                        <h3 id="kpi-total-visits" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">--</h3>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center space-x-1">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                            <span>De-identified records</span>
+                        </p>
+                    </div>
+                    <div class="p-3 bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 rounded-xl">
+                        <i class="fa-solid fa-hospital-user text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Metric 2 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Busiest Department</p>
+                        <h3 id="kpi-busiest-dept" class="text-lg font-bold text-slate-900 dark:text-white mt-1 truncate max-w-[150px]">--</h3>
+                        <p id="kpi-busiest-count" class="text-xs text-slate-500 dark:text-slate-400 mt-1">0 visits</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-xl">
+                        <i class="fa-solid fa-user-doctor text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Metric 3 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Daily Volume</p>
+                        <h3 id="kpi-avg-daily" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">--</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Visits per active day</p>
+                    </div>
+                    <div class="p-3 bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-xl">
+                        <i class="fa-solid fa-chart-line text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Metric 4 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Peak Visit Day</p>
+                        <h3 id="kpi-peak-day" class="text-base font-bold text-slate-900 dark:text-white mt-1 truncate max-w-[150px]">--</h3>
+                        <p id="kpi-peak-count" class="text-xs text-slate-500 dark:text-slate-400 mt-1">0 visits</p>
+                    </div>
+                    <div class="p-3 bg-rose-50 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 rounded-xl">
+                        <i class="fa-solid fa-calendar-day text-2xl"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Operational Analytics Charts Grid -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Chart 1: Department Workload Distribution -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Department Workload Distribution</h3>
+                            <p class="text-xs text-slate-400">Total volume allocated by specialty unit</p>
+                        </div>
+                        <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-[10px] font-semibold text-slate-500 dark:text-slate-300 rounded">Bar</span>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="deptChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Daily Visit Trend Analysis -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Daily Patient Volume Trends</h3>
+                            <p class="text-xs text-slate-400">Chronological visit history over active timeframe</p>
+                        </div>
+                        <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-[10px] font-semibold text-slate-500 dark:text-slate-300 rounded">Time-series</span>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3: Age Demographics Summary -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Patient Age Group Demographics</h3>
+                            <p class="text-xs text-slate-400">Aggregated non-identifying age band distribution</p>
+                        </div>
+                        <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-[10px] font-semibold text-slate-500 dark:text-slate-300 rounded">Doughnut</span>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 4: Visit Type Breakdown by Department -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">Visit Categories by Specialty</h3>
+                            <p class="text-xs text-slate-400">Stacked breakdown of consultation types</p>
+                        </div>
+                        <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-[10px] font-semibold text-slate-500 dark:text-slate-300 rounded">Stacked</span>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- De-identified Patient Visits Table Section -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <!-- Table Header & Controls -->
+                <div class="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base">De-identified Patient Visit Records</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Operational logs stripped of personally identifiable health information</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative max-w-xs w-full">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="table-search" onkeyup="handleSearch()" placeholder="Search ID, department..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                                <th class="py-3 px-4">Visit ID</th>
+                                <th class="py-3 px-4">Synthetic Patient ID</th>
+                                <th class="py-3 px-4">Department</th>
+                                <th class="py-3 px-4">Age Band</th>
+                                <th class="py-3 px-4">Date</th>
+                                <th class="py-3 px-4">Visit Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="visits-table-body" class="divide-y divide-slate-200 dark:divide-slate-700/60 text-slate-700 dark:text-slate-300">
+                            <!-- Rows populated dynamically via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table Footer & Pagination controls -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <div>
+                        Showing <strong id="pag-start" class="text-slate-700 dark:text-slate-200">0</strong> to <strong id="pag-end" class="text-slate-700 dark:text-slate-200">0</strong> of <strong id="pag-total" class="text-slate-700 dark:text-slate-200">0</strong> entries
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="pag-page" class="mr-2">Page 1 of 1</span>
+                        <button id="btn-prev" onclick="changePage(-1)" disabled class="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <button id="btn-next" onclick="changePage(1)" disabled class="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-8 py-4 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500">
+            CareMetrics Prototype &bull; Operational Patient Data & Workload Analytics &bull; Educational Demo
+        </footer>
+    </div>
+
+    <!-- Toast Container for Notifications -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-md w-full mx-4 overflow-hidden transform scale-95 transition-transform duration-200" id="passwordModalContainer">
+            <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-key text-brand-600"></i>
+                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Change Administrator Password</h3>
+                </div>
+                <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="changePasswordForm" onsubmit="handleChangePassword(event)" class="p-4 sm:p-5 space-y-4">
+                <div id="pwd-error" class="hidden p-3 rounded-lg bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center space-x-2">
+                    <i class="fa-solid fa-triangle-exclamation text-sm flex-shrink-0"></i>
+                    <span id="pwd-error-text">Current password is incorrect.</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
+                    <input type="password" id="current-pwd" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">New Password</label>
+                    <input type="password" id="new-pwd" minlength="6" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirm-new-pwd" minlength="6" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeChangePasswordModal()" class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prototype Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-md w-full mx-4 overflow-hidden transform scale-95 transition-transform duration-200" id="settingsModalContainer">
+            <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-brand-600"></i>
+                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Prototype Interface Settings</h3>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 sm:p-5 space-y-5 text-xs">
+                <!-- Theme Mode Toggle -->
+                <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                        <div class="font-semibold text-slate-800 dark:text-slate-200">Dark Theme Mode</div>
+                        <div class="text-slate-400 text-[11px]">Toggle application light / dark palette</div>
+                    </div>
+                    <button onclick="toggleDarkMode()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 rounded-md font-medium transition flex items-center space-x-1.5">
+                        <i id="settings-theme-icon" class="fa-solid fa-moon"></i>
+                        <span id="settings-theme-text">Dark Mode</span>
+                    </button>
+                </div>
+
+                <!-- Brand Color Palette Selection -->
+                <div>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-2">Accent Color Palette</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="setThemePalette('sky')" class="p-2 border rounded-lg flex flex-col items-center space-y-1 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600">
+                            <span class="w-5 h-5 rounded-full bg-sky-600 inline-block"></span>
+                            <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300">Sky Blue</span>
+                        </button>
+                        <button onclick="setThemePalette('emerald')" class="p-2 border rounded-lg flex flex-col items-center space-y-1 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600">
+                            <span class="w-5 h-5 rounded-full bg-emerald-600 inline-block"></span>
+                            <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300">Emerald</span>
+                        </button>
+                        <button onclick="setThemePalette('indigo')" class="p-2 border rounded-lg flex flex-col items-center space-y-1 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600">
+                            <span class="w-5 h-5 rounded-full bg-indigo-600 inline-block"></span>
+                            <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300">Indigo</span>
+                        </button>
+                        <button onclick="setThemePalette('rose')" class="p-2 border rounded-lg flex flex-col items-center space-y-1 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600">
+                            <span class="w-5 h-5 rounded-full bg-rose-600 inline-block"></span>
+                            <span class="text-[11px] font-medium text-slate-600 dark:text-slate-300">Rose</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Font Selection -->
+                <div>
+                    <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Typography Font Family</label>
+                    <select id="setting-font-family" onchange="changeFontFamily(this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="'Inter', sans-serif">Inter (Default Clean Modern)</option>
+                        <option value="'Segoe UI', Roboto, sans-serif">System UI / Roboto</option>
+                        <option value="Georgia, serif">Georgia (Classic Serif)</option>
+                        <option value="'Courier New', monospace">Courier (Monospace Tech)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Visit Record Modal -->
+    <div id="visitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-md w-full mx-4 overflow-hidden transform scale-95 transition-transform duration-200" id="modalContainer">
+            <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-clipboard-user text-brand-600"></i>
+                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Record New Synthetic Visit Log</h3>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="visitForm" onsubmit="handleFormSubmit(event)" class="p-4 sm:p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Department</label>
+                    <select id="input-dept" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="Cardiology">Cardiology</option>
+                        <option value="Orthopedics">Orthopedics</option>
+                        <option value="Pediatrics">Pediatrics</option>
+                        <option value="Emergency">Emergency</option>
+                        <option value="Neurology">Neurology</option>
+                        <option value="General Medicine">General Medicine</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Age Band</label>
+                    <select id="input-age-band" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="0-17">0-17 Years</option>
+                        <option value="18-35">18-35 Years</option>
+                        <option value="36-50">36-50 Years</option>
+                        <option value="51-65">51-65 Years</option>
+                        <option value="65+">65+ Years</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Visit Date</label>
+                    <input type="date" id="input-date" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Visit Type</label>
+                    <select id="input-visit-type" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="Routine Checkup">Routine Checkup</option>
+                        <option value="Follow-up">Follow-up</option>
+                        <option value="Emergency">Emergency</option>
+                        <option value="Consultation">Consultation</option>
+                    </select>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Security Audit Logs Modal -->
+    <div id="securityAuditModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl max-w-2xl w-full mx-4 overflow-hidden transform scale-95 transition-transform duration-200" id="auditModalContainer">
+            <div class="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-shield-cat text-brand-600"></i>
+                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Administrator Security & Access Audit Log</h3>
+                </div>
+                <button onclick="closeSecurityAuditModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 sm:p-5 max-h-96 overflow-y-auto space-y-3">
+                <div class="text-xs text-slate-500 mb-2">Immutable record of administrator login events and access attempts for compliance auditing.</div>
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-slate-700 text-slate-400 uppercase tracking-wider font-semibold">
+                            <th class="py-2">Timestamp</th>
+                            <th class="py-2">User Email</th>
+                            <th class="py-2">Action / Status</th>
+                            <th class="py-2">IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-log-rows" class="divide-y divide-slate-100 dark:divide-slate-700/50 text-slate-700 dark:text-slate-300">
+                        <!-- Audit entries inserted dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs text-slate-400">
+                <span>Session Lockout: 15 min inactivity</span>
+                <button onclick="closeSecurityAuditModal()" class="px-4 py-2 font-medium text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition">Close Audit View</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        // Registered Administrator Accounts Database (Hashed/Verified in-memory)
+        const REGISTERED_ADMINS = [
+            { email: "admin@hospital.org", pass: "Admin123!", role: "System Administrator", scope: "Full Access" },
+            { email: "director@hospital.org", pass: "Director2026!", role: "Operations Director", scope: "Analytics Only" },
+            { email: "head.admin@hospital.org", pass: "SecurePass!1", role: "Chief Records Officer", scope: "Audit & Management" }
+        ];
+
+        // Security Audit Log Memory
+        let auditLogs = [
+            { timestamp: new Date(Date.now() - 3600000).toLocaleString(), email: "admin@hospital.org", status: "AUTH_SUCCESS", ip: "192.168.1.104" },
+            { timestamp: new Date(Date.now() - 1800000).toLocaleString(), email: "unknown@external.net", status: "AUTH_DENIED", ip: "203.0.113.45" }
+        ];
+
+        // Security State Counters
+        let failedLoginAttempts = 0;
+        let isLockedOut = false;
+        let inactivityTimer = null;
+        const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 Minutes
+
+        // Authentication & Session State
+        let activeAdminPassword = "";
+        let isAuthenticated = false;
+
+        // Data Structures & State
+        const DEPARTMENTS = ["Cardiology", "Orthopedics", "Pediatrics", "Emergency", "Neurology", "General Medicine"];
+        const AGE_BANDS = ["0-17", "18-35", "36-50", "51-65", "65+"];
+        const VISIT_TYPES = ["Routine Checkup", "Follow-up", "Emergency", "Consultation"];
+
+        let masterVisitsData = [];
+        let filteredData = [];
+
+        // Table Pagination State
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let searchQuery = "";
+
+        // Chart Instances
+        let deptChartInstance = null;
+        let trendChartInstance = null;
+        let ageChartInstance = null;
+        let typeChartInstance = null;
+
+        // --- Core Application Initialization ---
+        window.onload = function() {
+            // Check session state
+            const savedAuth = sessionStorage.getItem('caremetrics_auth');
+            
+            masterVisitsData = generateSyntheticData(350);
+            filteredData = [...masterVisitsData];
+            
+            // Set default date input in modal to today if element exists
+            const dateInput = document.getElementById('input-date');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            if (savedAuth === 'true') {
+                grantAccess();
+            } else {
+                showLoginScreen();
+            }
+        };
+
+        // --- Authentication & Session Handlers ---
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('login-password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.className = 'fa-solid fa-eye-slash text-xs';
+            } else {
+                passInput.type = 'password';
+                eyeIcon.className = 'fa-solid fa-eye text-xs';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorBox = document.getElementById('login-error');
+            const errorText = document.getElementById('login-error-text');
+
+            if (isLockedOut) {
+                errorText.innerText = "Account locked due to multiple failed login attempts. Try again in 5 minutes.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            // Regex pattern to validate any email ending with @hospital.org
+            const hospitalEmailRegex = /^[a-zA-Z0-9._%+-]+@hospital\.org$/i;
+
+            if (hospitalEmailRegex.test(email) && password.length > 0) {
+                errorBox.classList.add('hidden');
+                failedLoginAttempts = 0;
+                activeAdminPassword = password;
+                
+                // Record successful authentication log
+                auditLogs.unshift({
+                    timestamp: new Date().toLocaleString(),
+                    email: email,
+                    status: "AUTH_SUCCESS",
+                    ip: "192.168.1." + Math.floor(Math.random() * 200 + 10)
+                });
+
+                sessionStorage.setItem('caremetrics_auth', 'true');
+                sessionStorage.setItem('caremetrics_user', email);
+                sessionStorage.setItem('caremetrics_role', 'Administrator');
+                sessionStorage.setItem('caremetrics_pass', password);
+                
+                grantAccess();
+                startInactivityTimer();
+                showToast(`Authenticated securely as ${email}`);
+            } else {
+                failedLoginAttempts++;
+                
+                // Record failed authentication attempt log
+                auditLogs.unshift({
+                    timestamp: new Date().toLocaleString(),
+                    email: email || "unknown",
+                    status: "AUTH_DENIED",
+                    ip: "10.0.4." + Math.floor(Math.random() * 200 + 10)
+                });
+
+                if (failedLoginAttempts >= 5) {
+                    isLockedOut = true;
+                    errorText.innerText = "SECURITY LOCKOUT: Too many failed access attempts. Access suspended.";
+                    setTimeout(() => { isLockedOut = false; failedLoginAttempts = 0; }, 300000);
+                } else {
+                    errorText.innerText = `Invalid login. Email must be formatted as name@hospital.org. (${5 - failedLoginAttempts} attempts remain)`;
+                }
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        // Automatic Inactivity Session Timeout Lock
+        function startInactivityTimer() {
+            resetInactivityTimer();
+            window.onmousemove = resetInactivityTimer;
+            window.onkeypress = resetInactivityTimer;
+            window.onclick = resetInactivityTimer;
+        }
+
+        function resetInactivityTimer() {
+            if (!isAuthenticated) return;
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                showToast("Session timed out due to inactivity for security.");
+                handleLogout();
+            }, INACTIVITY_TIMEOUT_MS);
+        }
+
+        // Audit Logs Modal
+        function openSecurityAuditModal() {
+            const tableBody = document.getElementById('audit-log-rows');
+            tableBody.innerHTML = '';
+            
+            auditLogs.forEach(log => {
+                const tr = document.createElement('tr');
+                const badgeColor = log.status === 'AUTH_SUCCESS' ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-600 bg-rose-50 dark:bg-rose-950/40';
+                tr.innerHTML = `
+                    <td class="py-2">${log.timestamp}</td>
+                    <td class="py-2 font-mono">${log.email}</td>
+                    <td class="py-2"><span class="px-2 py-0.5 rounded font-semibold text-[10px] ${badgeColor}">${log.status}</span></td>
+                    <td class="py-2 font-mono text-slate-400">${log.ip}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            const modal = document.getElementById('securityAuditModal');
+            const container = document.getElementById('auditModalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeSecurityAuditModal() {
+            const modal = document.getElementById('securityAuditModal');
+            const container = document.getElementById('auditModalContainer');
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('pwd-error').classList.add('hidden');
+            document.getElementById('current-pwd').value = '';
+            document.getElementById('new-pwd').value = '';
+            document.getElementById('confirm-new-pwd').value = '';
+
+            const modal = document.getElementById('changePasswordModal');
+            const container = document.getElementById('passwordModalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeChangePasswordModal() {
+            const modal = document.getElementById('changePasswordModal');
+            const container = document.getElementById('passwordModalContainer');
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function handleChangePassword(e) {
+            e.preventDefault();
+            const currentPwd = document.getElementById('current-pwd').value;
+            const newPwd = document.getElementById('new-pwd').value;
+            const confirmNewPwd = document.getElementById('confirm-new-pwd').value;
+            const errorBox = document.getElementById('pwd-error');
+            const errorText = document.getElementById('pwd-error-text');
+
+            if (currentPwd !== activeAdminPassword) {
+                errorText.innerText = "Current password does not match.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            if (newPwd !== confirmNewPwd) {
+                errorText.innerText = "New passwords do not match.";
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            activeAdminPassword = newPwd;
+            sessionStorage.setItem('caremetrics_pass', newPwd);
+            closeChangePasswordModal();
+            showToast("Administrator password updated successfully!");
+        }
+
+        // Settings Modal & Customizations
+        function openSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const container = document.getElementById('settingsModalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const container = document.getElementById('settingsModalContainer');
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function changeFontFamily(fontFamily) {
+            document.body.style.fontFamily = fontFamily;
+            showToast("Font family updated");
+        }
+
+        function setThemePalette(palette) {
+            const paletteMap = {
+                sky: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e' },
+                emerald: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+                indigo: { 50: '#eep2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' },
+                rose: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337' }
+            };
+
+            if (paletteMap[palette]) {
+                tailwind.config.theme.extend.colors.brand = paletteMap[palette];
+                showToast(`Color palette changed to ${palette.toUpperCase()}`);
+                if (deptChartInstance) {
+                    deptChartInstance.data.datasets[0].backgroundColor = paletteMap[palette][600];
+                    deptChartInstance.update();
+                }
+            }
+        }
+
+        function grantAccess() {
+            isAuthenticated = true;
+            const loginScreen = document.getElementById('login-screen');
+            const dashboard = document.getElementById('protected-dashboard');
+            
+            loginScreen.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                loginScreen.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+                
+                // Set User Email in Navbar dynamically
+                const userEmail = sessionStorage.getItem('caremetrics_user') || "admin@hospital.org";
+                document.getElementById('user-display-email').innerText = userEmail;
+
+                // Render Charts & Dashboard after layout visible
+                if (!deptChartInstance) {
+                    initCharts();
+                }
+                updateDashboard();
+            }, 200);
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('caremetrics_auth');
+            sessionStorage.removeItem('caremetrics_user');
+            sessionStorage.removeItem('caremetrics_pass');
+            isAuthenticated = false;
+
+            const loginScreen = document.getElementById('login-screen');
+            const dashboard = document.getElementById('protected-dashboard');
+
+            dashboard.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            setTimeout(() => {
+                loginScreen.classList.remove('opacity-0', 'pointer-events-none');
+            }, 10);
+
+            // Reset password field
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+            showToast("Logged out of Administrator session");
+        }
+
+        function showLoginScreen() {
+            document.getElementById('login-screen').classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            document.getElementById('protected-dashboard').classList.add('hidden');
+        }
+
+        // --- Data Generation (Synthetic Records) ---
+        function generateSyntheticData(count = 350) {
+            const records = [];
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 90); // 90 days of records
+
+            for (let i = 1; i <= count; i++) {
+                const randomTime = startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
+                const visitDate = new Date(randomTime).toISOString().split('T')[0];
+                
+                records.push({
+                    visit_id: 1000 + i,
+                    patient_id: `PAT-${Math.floor(1000 + Math.random() * 9000)}`,
+                    department: DEPARTMENTS[Math.floor(Math.random() * DEPARTMENTS.length)],
+                    age_band: AGE_BANDS[Math.floor(Math.random() * AGE_BANDS.length)],
+                    visit_date: visitDate,
+                    visit_type: VISIT_TYPES[Math.floor(Math.random() * VISIT_TYPES.length)]
+                });
+            }
+
+            // Sort by date descending
+            return records.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+        }
+
+        // --- Dark Mode Handler ---
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-toggle-icon');
+            const settingsIcon = document.getElementById('settings-theme-icon');
+            const settingsText = document.getElementById('settings-theme-text');
+
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon text-lg';
+                if (settingsIcon) settingsIcon.className = 'fa-solid fa-moon';
+                if (settingsText) settingsText.innerText = 'Light Mode';
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun text-lg text-amber-400';
+                if (settingsIcon) settingsIcon.className = 'fa-solid fa-sun text-amber-400';
+                if (settingsText) settingsText.innerText = 'Dark Mode';
+            }
+            updateChartColors();
+        }
+
+        function dismissBanner() {
+            document.getElementById('disclaimer-banner').style.display = 'none';
+        }
+
+        // --- Filter Logic ---
+        function applyFilters() {
+            const dept = document.getElementById('filter-dept').value;
+            const visitType = document.getElementById('filter-visit-type').value;
+            const ageBand = document.getElementById('filter-age-band').value;
+            const timeframe = document.getElementById('filter-timeframe').value;
+
+            const now = new Date();
+
+            filteredData = masterVisitsData.filter(item => {
+                if (dept !== 'ALL' && item.department !== dept) return false;
+                if (visitType !== 'ALL' && item.visit_type !== visitType) return false;
+                if (ageBand !== 'ALL' && item.age_band !== ageBand) return false;
+                
+                if (timeframe !== 'ALL') {
+                    const daysAgo = parseInt(timeframe);
+                    const itemDate = new Date(item.visit_date);
+                    const diffTime = Math.abs(now - itemDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays > daysAgo) return false;
+                }
+                return true;
+            });
+
+            currentPage = 1;
+            updateDashboard();
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-dept').value = 'ALL';
+            document.getElementById('filter-visit-type').value = 'ALL';
+            document.getElementById('filter-age-band').value = 'ALL';
+            document.getElementById('filter-timeframe').value = 'ALL';
+            document.getElementById('table-search').value = '';
+            searchQuery = "";
+            applyFilters();
+        }
+
+        // --- Dashboard Update Orchestration ---
+        function updateDashboard() {
+            renderKPIs();
+            renderTable();
+            renderCharts();
+        }
+
+        // --- Render KPI Cards ---
+        function renderKPIs() {
+            document.getElementById('kpi-total-visits').innerText = filteredData.length.toLocaleString();
+
+            if (filteredData.length === 0) {
+                document.getElementById('kpi-busiest-dept').innerText = 'N/A';
+                document.getElementById('kpi-busiest-count').innerText = '0 visits';
+                document.getElementById('kpi-avg-daily').innerText = '0';
+                document.getElementById('kpi-peak-day').innerText = 'N/A';
+                document.getElementById('kpi-peak-count').innerText = '0 visits';
+                return;
+            }
+
+            // Department Counts
+            const deptCounts = {};
+            filteredData.forEach(d => deptCounts[d.department] = (deptCounts[d.department] || 0) + 1);
+            let busiestDept = '';
+            let maxDeptCount = 0;
+            for (const [dept, count] of Object.entries(deptCounts)) {
+                if (count > maxDeptCount) {
+                    maxDeptCount = count;
+                    busiestDept = dept;
+                }
+            }
+            document.getElementById('kpi-busiest-dept').innerText = busiestDept;
+            document.getElementById('kpi-busiest-count').innerText = `${maxDeptCount} visits aggregate`;
+
+            // Daily Stats
+            const dailyCounts = {};
+            filteredData.forEach(d => dailyCounts[d.visit_date] = (dailyCounts[d.visit_date] || 0) + 1);
+            const activeDays = Object.keys(dailyCounts).length;
+            const avgDaily = activeDays > 0 ? (filteredData.length / activeDays).toFixed(1) : 0;
+            document.getElementById('kpi-avg-daily').innerText = avgDaily;
+
+            // Peak Day
+            let peakDay = '';
+            let peakCount = 0;
+            for (const [date, count] of Object.entries(dailyCounts)) {
+                if (count > peakCount) {
+                    peakCount = count;
+                    peakDay = date;
+                }
+            }
+            document.getElementById('kpi-peak-day').innerText = peakDay;
+            document.getElementById('kpi-peak-count').innerText = `${peakCount} visits recorded`;
+        }
+
+        // --- Render Table & Search ---
+        function handleSearch() {
+            searchQuery = document.getElementById('table-search').value.toLowerCase().trim();
+            currentPage = 1;
+            renderTable();
+        }
+
+        function getSearchedData() {
+            if (!searchQuery) return filteredData;
+            return filteredData.filter(item => 
+                item.patient_id.toLowerCase().includes(searchQuery) ||
+                item.department.toLowerCase().includes(searchQuery) ||
+                item.visit_type.toLowerCase().includes(searchQuery) ||
+                item.visit_id.toString().includes(searchQuery)
+            );
+        }
+
+        function renderTable() {
+            const tableBody = document.getElementById('visits-table-body');
+            const dataToDisplay = getSearchedData();
+            
+            const totalRecords = dataToDisplay.length;
+            const totalPages = Math.ceil(totalRecords / rowsPerPage) || 1;
+            
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = Math.min(startIdx + rowsPerPage, totalRecords);
+            const pageRecords = dataToDisplay.slice(startIdx, endIdx);
+
+            tableBody.innerHTML = '';
+
+            if (pageRecords.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-6 text-center text-slate-400">
+                            No patient visit records matching current parameters.
+                        </td>
+                    </tr>`;
+            } else {
+                pageRecords.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition';
+                    
+                    let badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+                    if (record.visit_type === 'Emergency') badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
+                    if (record.visit_type === 'Routine Checkup') badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+                    if (record.visit_type === 'Consultation') badgeClass = 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300';
+
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-mono text-xs">#${record.visit_id}</td>
+                        <td class="py-3 px-4 font-medium text-slate-900 dark:text-slate-100">${record.patient_id}</td>
+                        <td class="py-3 px-4">${record.department}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700">${record.age_band}</span></td>
+                        <td class="py-3 px-4 text-xs text-slate-500">${record.visit_date}</td>
+                        <td class="py-3 px-4">
+                            <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full ${badgeClass}">
+                                ${record.visit_type}
+                            </span>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            // Update Pagination UI Controls
+            document.getElementById('pag-start').innerText = totalRecords > 0 ? startIdx + 1 : 0;
+            document.getElementById('pag-end').innerText = endIdx;
+            document.getElementById('pag-total').innerText = totalRecords;
+            document.getElementById('pag-page').innerText = `Page ${currentPage} of ${totalPages}`;
+            
+            document.getElementById('btn-prev').disabled = currentPage === 1;
+            document.getElementById('btn-next').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderTable();
+        }
+
+        // --- Chart.js Visualization Logic ---
+        function initCharts() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            // Chart 1: Department Workload
+            const ctxDept = document.getElementById('deptChart').getContext('2d');
+            deptChartInstance = new Chart(ctxDept, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Visits', data: [], backgroundColor: '#0284c7', borderRadius: 6 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+                    }
+                }
+            });
+
+            // Chart 2: Trends
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Daily Volume', data: [], borderColor: '#0d9488', backgroundColor: 'rgba(13, 148, 136, 0.1)', fill: true, tension: 0.3 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8 } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+                    }
+                }
+            });
+
+            // Chart 3: Age Band Pie
+            const ctxAge = document.getElementById('ageChart').getContext('2d');
+            ageChartInstance = new Chart(ctxAge, {
+                type: 'doughnut',
+                data: { 
+                    labels: [], 
+                    datasets: [{ 
+                        data: [], 
+                        backgroundColor: ['#38bdf8', '#818cf8', '#c084fc', '#f472b6', '#fb7185'] 
+                    }] 
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 11 } } } }
+                }
+            });
+
+            // Chart 4: Stacked Visit Types
+            const ctxType = document.getElementById('typeChart').getContext('2d');
+            typeChartInstance = new Chart(ctxType, {
+                type: 'bar',
+                data: { labels: DEPARTMENTS, datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 10 } } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: textColor } },
+                        y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+                    }
+                }
+            });
+        }
+
+        function renderCharts() {
+            if (!deptChartInstance) return;
+
+            // 1. Dept Workload Data
+            const deptCounts = {};
+            DEPARTMENTS.forEach(d => deptCounts[d] = 0);
+            filteredData.forEach(d => { if (deptCounts[d.department] !== undefined) deptCounts[d.department]++; });
+
+            deptChartInstance.data.labels = DEPARTMENTS;
+            deptChartInstance.data.datasets[0].data = DEPARTMENTS.map(d => deptCounts[d]);
+            deptChartInstance.update();
+
+            // 2. Trend Line Data (Aggregated chronologically)
+            const dateCounts = {};
+            filteredData.forEach(d => dateCounts[d.visit_date] = (dateCounts[d.visit_date] || 0) + 1);
+            const sortedDates = Object.keys(dateCounts).sort((a,b) => new Date(a) - new Date(b));
+
+            trendChartInstance.data.labels = sortedDates;
+            trendChartInstance.data.datasets[0].data = sortedDates.map(date => dateCounts[date]);
+            trendChartInstance.update();
+
+            // 3. Age Band Data
+            const ageCounts = {};
+            AGE_BANDS.forEach(a => ageCounts[a] = 0);
+            filteredData.forEach(d => { if (ageCounts[d.age_band] !== undefined) ageCounts[d.age_band]++; });
+
+            ageChartInstance.data.labels = AGE_BANDS.map(a => `${a} Yrs`);
+            ageChartInstance.data.datasets[0].data = AGE_BANDS.map(a => ageCounts[a]);
+            ageChartInstance.update();
+
+            // 4. Stacked Visit Types
+            const typeColors = {
+                'Routine Checkup': '#10b981',
+                'Follow-up': '#3b82f6',
+                'Emergency': '#f43f5e',
+                'Consultation': '#8b5cf6'
+            };
+
+            const typeDatasets = VISIT_TYPES.map(vt => {
+                return {
+                    label: vt,
+                    backgroundColor: typeColors[vt],
+                    data: DEPARTMENTS.map(dept => {
+                        return filteredData.filter(item => item.department === dept && item.visit_type === vt).length;
+                    })
+                };
+            });
+
+            typeChartInstance.data.labels = DEPARTMENTS;
+            typeChartInstance.data.datasets = typeDatasets;
+            typeChartInstance.update();
+        }
+
+        function updateChartColors() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            [deptChartInstance, trendChartInstance, ageChartInstance, typeChartInstance].forEach(chart => {
+                if (!chart) return;
+                if (chart.options.scales?.x) chart.options.scales.x.ticks.color = textColor;
+                if (chart.options.scales?.y) {
+                    chart.options.scales.y.ticks.color = textColor;
+                    if (chart.options.scales.y.grid) chart.options.scales.y.grid.color = gridColor;
+                }
+                if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = textColor;
+                chart.update();
+            });
+        }
+
+        // --- Modal & Record Entry Handling ---
+        function openModal() {
+            const modal = document.getElementById('visitModal');
+            const container = document.getElementById('modalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('visitModal');
+            const container = document.getElementById('modalContainer');
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const newRecord = {
+                visit_id: masterVisitsData.length + 1001,
+                patient_id: `PAT-${Math.floor(1000 + Math.random() * 9000)}`,
+                department: document.getElementById('input-dept').value,
+                age_band: document.getElementById('input-age-band').value,
+                visit_date: document.getElementById('input-date').value,
+                visit_type: document.getElementById('input-visit-type').value
+            };
+
+            masterVisitsData.unshift(newRecord);
+            closeModal();
+            applyFilters();
+            showToast("New de-identified visit record logged successfully!");
+        }
+
+        // --- Simulated CSV Export ---
+        function exportCSV() {
+            const dataToExport = getSearchedData();
+            if (dataToExport.length === 0) {
+                showToast("No data available to export.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Visit ID,Patient ID,Department,Age Band,Visit Date,Visit Type\n";
+
+            dataToExport.forEach(row => {
+                csvContent += `${row.visit_id},${row.patient_id},${row.department},${row.age_band},${row.visit_date},${row.visit_type}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `hospital_operational_data_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast("CSV Operational report downloaded!");
+        }
+
+        // --- Notification Toast ---
+        function showToast(message) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium flex items-center space-x-2 pointer-events-auto transition duration-300 opacity-0 transform translate-y-2';
+            toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 dark:text-emerald-600"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
